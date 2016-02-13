@@ -11,6 +11,19 @@ import (
 	"time"
 )
 
+const (
+	msgChoices                     = "([r]ock, [p]aper or [s]cissors)"
+	msgChoose                      = "Make your choice! " + msgChoices
+	msgNoPrivateChat               = "I have lost track of our private chat. Please write me in a private chat and try again"
+	msgAlreadyIngame               = "You are already in a game right now, finish that first."
+	msgAlreadyIngameWillRemainOpen = msgAlreadyIngame + " Game will remain open..."
+	msgGameOpened                  = "Game opened! Join with /join, abort with /abort"
+	msgGameStarted                 = "Game started! Waiting for your choices in our private chats..."
+	msgGameAborted                 = "Game aborted"
+	msgOnlyCreatorCanAbort         = "Only the creator can abort a game"
+	msgCreatorAlreadyInGame        = "The creator is already in the game, idiot"
+)
+
 type command string
 
 const (
@@ -215,12 +228,12 @@ func handleMessage(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 
 func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 	if hasExpect(msg.From.ID) {
-		reply(msg, api, "You are already in a game right now")
+		reply(msg, api, msgAlreadyIngame)
 		return
 	}
 
 	if msg.Chat.IsPrivateChat() {
-		reply(msg, api, "You will play against the bot. Make your choice! ([r]ock, [p]aper or [s]cissors)")
+		reply(msg, api, "You will play against the bot. "+msgChoose)
 
 		eChan := make(chan choice)
 		expectsLock.Lock()
@@ -248,7 +261,7 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 		//group mode
 
 		if !hasChat(msg.From.ID) {
-			reply(msg, api, "I have lost track of our private chat. Please write me personally and try again")
+			reply(msg, api, msgNoPrivateChat)
 			return
 		}
 
@@ -259,7 +272,7 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 
 		messages := make(chan tbotapi.Message)
 		groups[msg.Chat.ID] = messages
-		reply(msg, api, "Game opened. Join with /join, abort with /abort")
+		reply(msg, api, msgGameOpened)
 
 		go func(original tbotapi.Message, api *tbotapi.TelegramBotAPI, messages chan tbotapi.Message) {
 			var p1, p2 chan choice
@@ -275,23 +288,23 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 				switch parseCommand(text) {
 				case cmdJoin:
 					if msg.From.ID == original.From.ID {
-						reply(original, api, "The creator is already in the game, idiot")
+						reply(original, api, msgCreatorAlreadyInGame)
 					} else {
 						expectsLock.Lock()
 						if _, ok := expects[original.From.ID]; ok {
-							reply(msg, api, "The creator is already in a game right now, game will remain open...")
+							reply(msg, api, msgAlreadyIngameWillRemainOpen)
 							expectsLock.Unlock()
 							continue loop
 						}
 
 						if _, ok := expects[msg.From.ID]; ok {
-							reply(msg, api, "You are already in a game right now, game will remain open...")
+							reply(msg, api, msgAlreadyIngameWillRemainOpen)
 							expectsLock.Unlock()
 							continue loop
 						}
 
 						if !hasChat(msg.From.ID) {
-							reply(msg, api, "I have lost track of our private chat. Please write me personally and try again")
+							reply(msg, api, msgNoPrivateChat)
 							expectsLock.Unlock()
 							continue loop
 						}
@@ -310,9 +323,9 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 
 						partner = msg.From
 
-						sendTo(p1Chat, api, "Waiting for your choice. ([r]ock, [p]aper, [s]cissors)")
-						sendTo(p2Chat, api, "Waiting for your choice. ([r]ock, [p]aper, [s]cissors)")
-						reply(original, api, "Game started, send me your choices in a private chat.")
+						sendTo(p1Chat, api, msgChoose)
+						sendTo(p2Chat, api, msgChoose)
+						reply(original, api, msgGameStarted)
 
 						break loop
 					}
@@ -321,10 +334,10 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 						groupsLock.Lock()
 						delete(groups, original.Chat.ID)
 						groupsLock.Unlock()
-						reply(original, api, "Game aborted.")
+						reply(original, api, msgGameAborted)
 						return
 					} else {
-						reply(original, api, "Only the creator can abort a game")
+						reply(original, api, msgOnlyCreatorCanAbort)
 					}
 				}
 			}
