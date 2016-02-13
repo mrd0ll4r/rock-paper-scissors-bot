@@ -11,6 +11,65 @@ import (
 	"time"
 )
 
+type command string
+
+const (
+	cmdStart   = command("start")
+	cmdStop    = command("stop")
+	cmdNew     = command("new")
+	cmdJoin    = command("join")
+	cmdAbort   = command("abort")
+	cmdUnknown = command("unknown")
+)
+
+func parseCommand(text string) command {
+	text = strings.ToLower(text)
+	if !strings.HasPrefix(text, "/") {
+		return cmdUnknown
+	}
+
+	text = text[1:]
+	switch text {
+	case "new" || "n" || "new@"+api.Username:
+		return cmdNew
+	case "join" || "j" || "join@"+api.Username:
+		return cmdJoin
+	case "abort" || "a" || "abort@"+api.Username:
+		return cmdAbort
+	case "start" || "start@"+api.Username:
+		return cmdStart
+	case "stop" || "stop@"+api.Username:
+		return cmdStop
+	default:
+		return cmdUnknown
+	}
+}
+
+type choice string
+
+const (
+	choiceRock     = choice("rock")
+	choicePaper    = choice("paper")
+	choiceScissors = choice("scissors")
+	choiceUnknown  = choice("unknown")
+)
+
+func parseChoice(text string) choice {
+	text = strings.ToLower(text)
+	switch text {
+	case "rock" || "r":
+		return choiceRock
+	case "paper" || "p":
+		return choicePaper
+	case "scissors" || "s":
+		return choiceScissors
+	default:
+		return choiceUnknown
+	}
+}
+
+var api *tbotapi.TelegramBotAPI
+
 // RunBot runs a bot.
 // It will block until either something very bad happens or closing is closed.
 func RunBot(apiKey string, closing chan struct{}) {
@@ -125,7 +184,8 @@ func handleMessage(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 
 	if strings.HasPrefix(text, "/") {
 		//command
-		if text == "/new" {
+		cmd := parseCommand(text)
+		if cmd == cmdNew {
 			game(msg, api)
 			return
 		}
@@ -140,14 +200,14 @@ func handleMessage(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 			uid := msg.From.ID
 			expectsLock.Lock()
 			if expect, ok := expects[uid]; ok {
-				switch strings.ToLower(text) {
-				case "rock":
+				switch parseChoice(text) {
+				case choiceRock:
 					expect <- "rock"
 					delete(expects, uid)
-				case "paper":
+				case choicePaper:
 					expect <- "paper"
 					delete(expects, uid)
-				case "scissors":
+				case choiceScissors:
 					expect <- "scissors"
 					delete(expects, uid)
 				default:
@@ -203,7 +263,7 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 
 		messages := make(chan tbotapi.Message)
 		groups[msg.Chat.ID] = messages
-		reply(msg, api, "Game opened. Join with /join, abort with /stop")
+		reply(msg, api, "Game opened. Join with /join, abort with /abort")
 
 		go func(original tbotapi.Message, api *tbotapi.TelegramBotAPI, messages chan tbotapi.Message) {
 			var p1, p2 chan string
@@ -216,8 +276,8 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 					continue
 				}
 				text := *msg.Text
-				switch strings.ToLower(text) {
-				case "/join":
+				switch parseCommand(text) {
+				case cmdJoin:
 					if msg.From.ID == original.From.ID {
 						reply(original, api, "The creator is already in the game, idiot")
 					} else {
@@ -254,13 +314,13 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 
 						partner = msg.From
 
-						sendTo(p1Chat, api, "Waiting for your choice. (rock, paper, scissors)")
-						sendTo(p2Chat, api, "Waiting for your choice. (rock, paper, scissors)")
+						sendTo(p1Chat, api, "Waiting for your choice. ([r]ock, [p]aper, [s]cissors)")
+						sendTo(p2Chat, api, "Waiting for your choice. ([r]ock, [p]aper, [s]cissors)")
 						reply(original, api, "Game started, send me your choices in a private chat.")
 
 						break loop
 					}
-				case "/stop":
+				case cmdAbort:
 					if msg.From.ID == original.From.ID {
 						groupsLock.Lock()
 						delete(groups, original.Chat.ID)
@@ -268,7 +328,7 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 						reply(original, api, "Game aborted.")
 						return
 					} else {
-						reply(original, api, "Only the creator can stop a game")
+						reply(original, api, "Only the creator can abort a game")
 					}
 				}
 			}
