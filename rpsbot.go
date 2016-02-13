@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 // RunBot runs a bot.
@@ -57,6 +58,23 @@ func RunBot(apiKey string, closing chan struct{}) {
 				// ignore
 				default:
 					fmt.Printf("Ignoring unknown Update type.")
+				}
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-closed:
+				return
+			case <-time.After(10 * time.Minute):
+				fmt.Println("Saving db...")
+				err = dumpChatsToFile("chats.json")
+				if err != nil {
+					fmt.Println("Could not save:", err.Error())
 				}
 			}
 		}
