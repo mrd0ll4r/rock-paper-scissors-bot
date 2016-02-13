@@ -112,7 +112,11 @@ func handleMessage(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 		return
 	}
 	text := *msg.Text
-	fmt.Printf("<-%d, From:\t%s\t(%s), Text: %s \n", msg.ID, msg.From, msg.Chat, text)
+	if msg.Chat.IsPrivateChat() {
+		fmt.Printf("<-%d, %s,\t%q\n", msg.ID, msg.Chat, text)
+	} else {
+		fmt.Printf("<-%d, %s(%s),\t%q\n", msg.ID, msg.Chat, msg.From, text)
+	}
 
 	if msg.Chat.IsPrivateChat() {
 		//always update the list of private chats
@@ -336,7 +340,7 @@ func sendTo(chat int, api *tbotapi.TelegramBotAPI, text string) error {
 		return err
 	}
 
-	fmt.Printf("->%d, To:\t%s, Text: %s\n", outMsg.Message.ID, outMsg.Message.Chat, *outMsg.Message.Text)
+	fmt.Printf("->%d, %s,\t%q\n", outMsg.Message.ID, outMsg.Message.Chat, *outMsg.Message.Text)
 	return nil
 }
 
