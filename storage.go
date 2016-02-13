@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-var expects map[int]chan string = make(map[int]chan string)                  // maps user IDs to channels of expected messages
+var expects map[int]chan choice = make(map[int]chan choice)                  // maps user IDs to channels of expected messages
 var chats map[int]int = make(map[int]int)                                    // maps user IDs to private chat IDs
 var groups map[int]chan tbotapi.Message = make(map[int]chan tbotapi.Message) // maps group IDs to channels of expected messages
 

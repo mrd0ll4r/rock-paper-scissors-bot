@@ -30,15 +30,15 @@ func parseCommand(text string) command {
 
 	text = text[1:]
 	switch text {
-	case "new" || "n" || "new@"+api.Username:
+	case "new", "n", "new@" + api.Username:
 		return cmdNew
-	case "join" || "j" || "join@"+api.Username:
+	case "join", "j", "join@" + api.Username:
 		return cmdJoin
-	case "abort" || "a" || "abort@"+api.Username:
+	case "abort", "a", "abort@" + api.Username:
 		return cmdAbort
-	case "start" || "start@"+api.Username:
+	case "start", "start@" + api.Username:
 		return cmdStart
-	case "stop" || "stop@"+api.Username:
+	case "stop", "stop@" + api.Username:
 		return cmdStop
 	default:
 		return cmdUnknown
@@ -57,11 +57,11 @@ const (
 func parseChoice(text string) choice {
 	text = strings.ToLower(text)
 	switch text {
-	case "rock" || "r":
+	case "rock", "r":
 		return choiceRock
-	case "paper" || "p":
+	case "paper", "p":
 		return choicePaper
-	case "scissors" || "s":
+	case "scissors", "s":
 		return choiceScissors
 	default:
 		return choiceUnknown
@@ -201,14 +201,8 @@ func handleMessage(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 			expectsLock.Lock()
 			if expect, ok := expects[uid]; ok {
 				switch parseChoice(text) {
-				case choiceRock:
-					expect <- "rock"
-					delete(expects, uid)
-				case choicePaper:
-					expect <- "paper"
-					delete(expects, uid)
-				case choiceScissors:
-					expect <- "scissors"
+				case choiceRock, choicePaper, choiceScissors:
+					expect <- parseChoice(text)
 					delete(expects, uid)
 				default:
 					reply(msg, api, "No understand")
@@ -226,23 +220,25 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 	}
 
 	if msg.Chat.IsPrivateChat() {
-		reply(msg, api, "You will play against the bot. Make your choice! (reply with rock, paper or scissors)")
+		reply(msg, api, "You will play against the bot. Make your choice! ([r]ock, [p]aper or [s]cissors)")
 
-		eChan := make(chan string)
+		eChan := make(chan choice)
+		expectsLock.Lock()
 		expects[msg.From.ID] = eChan
+		expectsLock.Unlock()
 
-		go func(original tbotapi.Message, api *tbotapi.TelegramBotAPI, expected chan string) {
+		go func(original tbotapi.Message, api *tbotapi.TelegramBotAPI, expected chan choice) {
 			choice := <-eChan
 
 			botChoice := rand.Float64()
 
 			var resp string
 			if botChoice < (float64(1) / float64(3)) {
-				resp = formatResponse("the bot", "you", "rock", choice)
+				resp = formatResponse("the bot", "you", choiceRock, choice)
 			} else if botChoice < (float64(2) / float64(3)) {
-				resp = formatResponse("the bot", "you", "paper", choice)
+				resp = formatResponse("the bot", "you", choicePaper, choice)
 			} else {
-				resp = formatResponse("the bot", "you", "scissors", choice)
+				resp = formatResponse("the bot", "you", choiceScissors, choice)
 			}
 
 			reply(original, api, resp)
@@ -266,7 +262,7 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 		reply(msg, api, "Game opened. Join with /join, abort with /abort")
 
 		go func(original tbotapi.Message, api *tbotapi.TelegramBotAPI, messages chan tbotapi.Message) {
-			var p1, p2 chan string
+			var p1, p2 chan choice
 			var partner tbotapi.User
 
 		loop:
@@ -303,9 +299,9 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 						groupsLock.Lock()
 						delete(groups, original.Chat.ID)
 						groupsLock.Unlock()
-						p1 = make(chan string)
+						p1 = make(chan choice)
 						expects[original.From.ID] = p1
-						p2 = make(chan string)
+						p2 = make(chan choice)
 						expects[msg.From.ID] = p2
 						expectsLock.Unlock()
 
@@ -335,7 +331,7 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 
 			// game running
 
-			var choice1, choice2 string
+			var choice1, choice2 choice
 
 		nextloop:
 			for {
@@ -359,34 +355,34 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 	}
 }
 
-func formatResponse(part1, part2, choice1, choice2 string) string {
+func formatResponse(part1, part2 string, choice1, choice2 choice) string {
 	var res string
 	switch choice1 {
-	case "rock":
+	case choiceRock:
 		switch choice2 {
-		case "rock":
+		case choiceRock:
 			res = "tie"
-		case "paper":
+		case choicePaper:
 			res = part2 + " wins"
-		case "scissors":
+		case choiceScissors:
 			res = part1 + " wins"
 		}
-	case "paper":
+	case choicePaper:
 		switch choice2 {
-		case "rock":
+		case choiceRock:
 			res = part1 + " wins"
-		case "paper":
+		case choicePaper:
 			res = "tie"
-		case "scissors":
+		case choiceScissors:
 			res = part2 + " wins"
 		}
-	case "scissors":
+	case choiceScissors:
 		switch choice2 {
-		case "rock":
+		case choiceRock:
 			res = part2 + " wins"
-		case "paper":
+		case choicePaper:
 			res = part1 + " wins"
-		case "scissors":
+		case choiceScissors:
 			res = "tie"
 		}
 	}
