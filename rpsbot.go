@@ -86,6 +86,8 @@ var api *tbotapi.TelegramBotAPI
 // RunBot runs a bot.
 // It will block until either something very bad happens or closing is closed.
 func RunBot(apiKey string, closing chan struct{}) {
+	var err error
+
 	fmt.Println("Starting...")
 	if fileExists("chats.json") {
 		fmt.Println("Loading chats...")
@@ -96,7 +98,7 @@ func RunBot(apiKey string, closing chan struct{}) {
 	}
 
 	fmt.Println("Starting bot...")
-	api, err := tbotapi.New(apiKey)
+	api, err = tbotapi.New(apiKey)
 	if err != nil {
 		log.Fatal(err)
 	}
