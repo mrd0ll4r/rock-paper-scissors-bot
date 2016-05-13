@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
-	"github.com/mrd0ll4r/rock-paper-scissors-bot"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/mrd0ll4r/rock-paper-scissors-bot"
 )
 
 var token = flag.String("token", "<your-token-here>", "Telegram bot API token")

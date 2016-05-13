@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"bitbucket.org/mrd0ll4r/tbotapi"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mrd0ll4r/tbotapi"
 )
 
 const (
@@ -338,9 +339,8 @@ func game(msg tbotapi.Message, api *tbotapi.TelegramBotAPI) {
 						groupsLock.Unlock()
 						reply(original, api, msgGameAborted)
 						return
-					} else {
-						reply(original, api, msgOnlyCreatorCanAbort)
 					}
+					reply(original, api, msgOnlyCreatorCanAbort)
 				}
 			}
 

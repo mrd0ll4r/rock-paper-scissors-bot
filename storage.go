@@ -1,18 +1,19 @@
 package bot
 
 import (
-	"bitbucket.org/mrd0ll4r/tbotapi"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
 	"sync"
+
+	"github.com/mrd0ll4r/tbotapi"
 )
 
-var expects map[int]chan choice = make(map[int]chan choice)                  // maps user IDs to channels of expected messages
-var chats map[int]int = make(map[int]int)                                    // maps user IDs to private chat IDs
-var groups map[int]chan tbotapi.Message = make(map[int]chan tbotapi.Message) // maps group IDs to channels of expected messages
+var expects = make(map[int]chan choice)         // maps user IDs to channels of expected messages
+var chats = make(map[int]int)                   // maps user IDs to private chat IDs
+var groups = make(map[int]chan tbotapi.Message) // maps group IDs to channels of expected messages
 
 var expectsLock sync.RWMutex
 var chatsLock sync.RWMutex
